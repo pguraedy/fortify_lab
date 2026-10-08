@@ -1,0 +1,4 @@
+Fortify Lab Toolkit v12 Foundation
+Package format: {{PACKAGE_FORMAT}}
+Source archive: {{ARCHIVE_NAME}}
+Extraction command: {{EXTRACT_COMMAND}}
