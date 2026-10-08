@@ -1,0 +1,10 @@
+===== 02-command-smoke.sh =====
+PASS: help command
+PASS: workflow status
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/test-results/20261008-121145/help.txt contains workflow run\|resume\|status
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/test-results/20261008-121145/help.txt contains hosts precheck\|apply\|verify
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/test-results/20261008-121145/help.txt contains license import\|validate\|sync
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/test-results/20261008-121145/workflow-status.txt contains hostname-resolution
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/test-results/20261008-121145/workflow-status.txt contains license-file
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/test-results/20261008-121145/workflow-status.txt contains final-validation
+RESULT: PASS=8 FAIL=0 SKIP=0

@@ -1,0 +1,6 @@
+===== 04-state-resume.sh =====
+PASS: state writes PASS
+PASS: state writes INTERRUPTED
+PASS: resume selects interrupted stage
+PASS: resume advances after pass
+RESULT: PASS=4 FAIL=0 SKIP=0

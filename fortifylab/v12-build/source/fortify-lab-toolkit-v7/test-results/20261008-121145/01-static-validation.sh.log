@@ -1,0 +1,39 @@
+===== 01-static-validation.sh =====
+PASS: bash syntax: bin/fortify-lab
+PASS: bash syntax: install.sh
+PASS: bash syntax: lib/certificates.sh
+PASS: bash syntax: lib/common.sh
+PASS: bash syntax: lib/config.sh
+PASS: bash syntax: lib/database.sh
+PASS: bash syntax: lib/fcli.sh
+PASS: bash syntax: lib/guided.sh
+PASS: bash syntax: lib/health.sh
+PASS: bash syntax: lib/hosts.sh
+PASS: bash syntax: lib/license.sh
+PASS: bash syntax: lib/licensing.sh
+PASS: bash syntax: lib/lifecycle.sh
+PASS: bash syntax: lib/prerequisites.sh
+PASS: bash syntax: lib/probes.sh
+PASS: bash syntax: lib/recovery-hardened.sh
+PASS: bash syntax: lib/repair.sh
+PASS: bash syntax: lib/repository.sh
+PASS: bash syntax: lib/secrets.sh
+PASS: bash syntax: lib/ssc.sh
+PASS: bash syntax: lib/stages.sh
+PASS: bash syntax: lib/update.sh
+PASS: bash syntax: lib/versions.sh
+PASS: executable: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/bin/fortify-lab
+PASS: executable: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/install.sh
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/lib/stages.sh contains hostname-resolution
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/lib/stages.sh contains license-file
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/lib/stages.sh contains MANUAL_PENDING
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/lib/hosts.sh contains hosts_precheck
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/lib/hosts.sh contains Duplicate definitions
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/lib/license.sh contains license-secret.sha256
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/lib/certificates.sh contains LIM_HOSTNAME
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/lib/certificates.sh contains SAST_HOSTNAME
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/lib/certificates.sh contains DAST_HOSTNAME
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/config/deployment.env.example contains ^NAMESPACE=fortify$
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/config/deployment.env.example contains ^DOMAIN_SUFFIX=com$
+PASS: /home/pguraedy/fortify_lab/fortifylab/v12-build/source/fortify-lab-toolkit-v7/config/deployment.env.example contains ^EXTERNAL_FQDN=ssc\.fortify\.com$
+RESULT: PASS=37 FAIL=0 SKIP=0

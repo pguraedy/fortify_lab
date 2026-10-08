@@ -2,8 +2,15 @@
 set -Eeuo pipefail
 umask 077
 
+if [[ $EUID -eq 0 ]]; then
+    echo "WARNING: Running build-v12.sh with sudo is not recommended."
+    echo "The builder does not require root privileges."
+    echo
+fi
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "$SCRIPT_DIR"
+
 PACKAGE_DIR="$SCRIPT_DIR"
 WORK=${WORK:-$SCRIPT_DIR/v12-build}
 OUT=${OUT:-$SCRIPT_DIR/dist}
@@ -28,7 +35,18 @@ if [[ "${1:-}" == "--verify" ]]; then
             exit 1
         }
 
-        echo "OK: $f"
+        root=$(
+            tar -tzf "$f" 2>/dev/null |
+            head -1 |
+            cut -d/ -f1
+        )
+
+        [[ -n "$root" ]] || {
+            echo "Invalid package layout: $f"
+            exit 1
+        }
+
+        echo "OK: $f (root=$root)"
     done
 
     echo
@@ -36,8 +54,15 @@ if [[ "${1:-}" == "--verify" ]]; then
     exit 0
 fi
 
-[[ -d "$SCRIPT_DIR/assets" ]] || { echo "ERROR: Missing assets directory under $SCRIPT_DIR" >&2; exit 1; }
-[[ -d "$SCRIPT_DIR/tests" ]] || { echo "ERROR: Missing tests directory under $SCRIPT_DIR" >&2; exit 1; }
+[[ -d "$SCRIPT_DIR/assets" ]] || {
+    echo "ERROR: Missing assets directory under $SCRIPT_DIR" >&2
+    exit 1
+}
+
+[[ -d "$SCRIPT_DIR/tests" ]] || {
+    echo "ERROR: Missing tests directory under $SCRIPT_DIR" >&2
+    exit 1
+}
 
 echo
 echo "Builder directory:"
@@ -49,6 +74,7 @@ echo
 echo "Files detected:"
 find "$PACKAGE_DIR" -maxdepth 1 -type f -printf '  %f\n' | sort
 echo
+
 ROOT_NAME=fortify-lab-toolkit-v12
 ZIP_NAME=fortify-lab-toolkit-v12-foundation.zip
 TAR_NAME=fortify-lab-toolkit-v12-foundation.tar.gz
@@ -61,59 +87,101 @@ STEMS=(
   fortify-guided-lifecycle-addon-v11
 )
 
-fatal(){ printf 'ERROR: %s\n' "$*" >&2; exit 1; }
-
-find_package(){
-  local stem=$1 zip="$PACKAGE_DIR/$stem.zip" tgz="$PACKAGE_DIR/$stem.tar.gz"
-  local have_zip=0 have_tgz=0
-  [[ -f "$zip" ]] && have_zip=1
-  [[ -f "$tgz" ]] && have_tgz=1
-  if (( have_zip && have_tgz )); then
-    fatal "Duplicate package formats found for $stem. Keep exactly one of: $stem.zip or $stem.tar.gz"
-  elif (( have_zip )); then
-    printf '%s\n' "$zip"
-  elif (( have_tgz )); then
-    printf '%s\n' "$tgz"
-  else
-    fatal "Missing required package $stem. Expected exactly one of: $stem.zip or $stem.tar.gz in $PACKAGE_DIR"
-  fi
+fatal() {
+    printf 'ERROR: %s\n' "$*" >&2
+    exit 1
 }
 
-validate_archive(){
-  local archive=$1
-  [[ -s "$archive" ]] || fatal "Archive is empty: $archive"
-  case "$archive" in
-    *.zip) unzip -tq "$archive" >/dev/null || fatal "Invalid ZIP archive: $archive";;
-    *.tar.gz) tar -tzf "$archive" >/dev/null || fatal "Invalid TAR.GZ archive: $archive";;
-    *) fatal "Unsupported archive format: $archive";;
-  esac
+find_package() {
+    local stem=$1
+    local zip="$PACKAGE_DIR/$stem.zip"
+    local tgz="$PACKAGE_DIR/$stem.tar.gz"
+
+    local have_zip=0
+    local have_tgz=0
+
+    [[ -f "$zip" ]] && have_zip=1
+    [[ -f "$tgz" ]] && have_tgz=1
+
+    if (( have_zip && have_tgz )); then
+        fatal "Duplicate package formats found for $stem. Keep exactly one of: $stem.zip or $stem.tar.gz"
+
+    elif (( have_zip )); then
+        printf '%s\n' "$zip"
+
+    elif (( have_tgz )); then
+        printf '%s\n' "$tgz"
+
+    else
+        fatal "Missing required package $stem. Expected exactly one of: $stem.zip or $stem.tar.gz in $PACKAGE_DIR"
+    fi
 }
 
-extract_archive(){
-  local archive=$1 destination=$2
-  mkdir -p "$destination"
-  case "$archive" in
-    *.zip) unzip -q "$archive" -d "$destination";;
-    *.tar.gz) tar -xzf "$archive" -C "$destination";;
-    *) fatal "Unsupported archive format during extraction: $archive";;
-  esac
+validate_archive() {
+    local archive=$1
+
+    [[ -s "$archive" ]] || fatal "Archive is empty: $archive"
+
+    case "$archive" in
+        *.zip)
+            unzip -tq "$archive" >/dev/null || fatal "Invalid ZIP archive: $archive"
+            ;;
+        *.tar.gz)
+            tar -tzf "$archive" >/dev/null || fatal "Invalid TAR.GZ archive: $archive"
+            ;;
+        *)
+            fatal "Unsupported archive format: $archive"
+            ;;
+    esac
 }
 
-validate_expected_root(){
-  local archive=$1 destination=$2 expected=$3
-  [[ -d "$destination/$expected" ]] || {
-    printf 'Archive contents for %s:\n' "$archive" >&2
-    find "$destination" -mindepth 1 -maxdepth 2 -printf '  %P\n' >&2 || true
-    fatal "Package $archive did not extract expected root directory: $expected"
-  }
+extract_archive() {
+    local archive=$1
+    local destination=$2
+
+    mkdir -p "$destination"
+
+    case "$archive" in
+        *.zip)
+            unzip -q "$archive" -d "$destination"
+            ;;
+        *.tar.gz)
+            tar -xzf "$archive" -C "$destination"
+            ;;
+        *)
+            fatal "Unsupported archive format during extraction: $archive"
+            ;;
+    esac
 }
 
-render_template(){
-  local template=$1 output=$2 format=$3 archive=$4 command=$5 block=$6
-  python3 - "$template" "$output" "$format" "$archive" "$command" "$block" <<'PY'
-import pathlib, sys
+validate_expected_root() {
+    local archive=$1
+    local destination=$2
+    local expected=$3
+
+    [[ -d "$destination/$expected" ]] || {
+        printf 'Archive contents for %s:\n' "$archive" >&2
+        find "$destination" -mindepth 1 -maxdepth 2 -printf '  %P\n' >&2 || true
+        fatal "Package $archive did not extract expected root directory: $expected"
+    }
+}
+
+render_template() {
+    local template=$1
+    local output=$2
+    local format=$3
+    local archive=$4
+    local command=$5
+    local block=$6
+
+    python3 - "$template" "$output" "$format" "$archive" "$command" "$block" <<'PY'
+import pathlib
+import sys
+
 src, out, fmt, archive, command, block = sys.argv[1:]
+
 text = pathlib.Path(src).read_text()
+
 for key, value in {
     '{{PACKAGE_FORMAT}}': fmt,
     '{{ARCHIVE_NAME}}': archive,
@@ -121,78 +189,167 @@ for key, value in {
     '{{EXTRACTION_BLOCK}}': block,
 }.items():
     text = text.replace(key, value)
+
 if '{{' in text or '}}' in text:
     raise SystemExit(f'Unresolved template token in {src}')
+
 pathlib.Path(out).write_text(text)
 PY
 }
 
-scan_wrong_format_references(){
-  local tree=$1 forbidden=$2
-  local hit
-  hit=$(grep -RInF --exclude='*.pdf' --exclude='*.png' --exclude='*.jpg' --exclude='*.zip' --exclude='*.gz' "$forbidden" "$tree" || true)
-  [[ -z "$hit" ]] || { printf '%s\n' "$hit" >&2; fatal "Wrong-format archive reference found: $forbidden"; }
+scan_wrong_format_references() {
+    local tree=$1
+    local forbidden=$2
+
+    local hit
+
+    hit=$(
+        grep -RInF \
+            --exclude='*.pdf' \
+            --exclude='*.png' \
+            --exclude='*.jpg' \
+            --exclude='*.zip' \
+            --exclude='*.gz' \
+            "$forbidden" "$tree" \
+        || true
+    )
+
+    [[ -z "$hit" ]] || {
+        printf '%s\n' "$hit" >&2
+        fatal "Wrong-format archive reference found: $forbidden"
+    }
 }
 
-# Discover exactly one format for every required input.
 declare -A PKG
+
 for stem in "${STEMS[@]}"; do
-  PKG["$stem"]=$(find_package "$stem")
-  validate_archive "${PKG[$stem]}"
+    PKG["$stem"]=$(find_package "$stem")
+    validate_archive "${PKG[$stem]}"
 done
 
 printf '\nDetected and validated input packages\n=====================================\n'
-for stem in "${STEMS[@]}"; do printf '  %-38s %s\n' "$stem" "$(basename "${PKG[$stem]}")"; done
+
+for stem in "${STEMS[@]}"; do
+    printf '  %-38s %s\n' "$stem" "$(basename "${PKG[$stem]}")"
+done
+
 printf '\n'
 
 rm -rf "$WORK"
 mkdir -p "$WORK/source" "$OUT"
 
-# Extract each input into an isolated area first, validate its root, then merge.
 for stem in "${STEMS[@]}"; do
-  stage="$WORK/extracted/$stem"
-  extract_archive "${PKG[$stem]}" "$stage"
-  validate_expected_root "${PKG[$stem]}" "$stage" "$stem"
-  cp -a "$stage/$stem" "$WORK/source/"
+    stage="$WORK/extracted/$stem"
+
+    extract_archive "${PKG[$stem]}" "$stage"
+    validate_expected_root "${PKG[$stem]}" "$stage" "$stem"
+
+    cp -a "$stage/$stem" "$WORK/source/"
 done
 
+find "$WORK/source" -type f -name "*.sh" -exec chmod +x {} \;
+
 TARGET="$WORK/source/fortify-lab-toolkit-v7"
-"$WORK/source/fortify-github-addon-v8/apply-to-v7.sh" "$TARGET"
-"$WORK/source/fortify-recovery-addon-v9/apply-to-v7.sh" "$TARGET"
-"$WORK/source/fortify-validation-addon-v10/apply-to-v7.sh" "$TARGET"
-"$WORK/source/fortify-guided-lifecycle-addon-v11/apply-to-v7.sh" "$TARGET"
+
+bash "$WORK/source/fortify-github-addon-v8/apply-to-v7.sh" "$TARGET"
+bash "$WORK/source/fortify-recovery-addon-v9/apply-to-v7.sh" "$TARGET"
+bash "$WORK/source/fortify-validation-addon-v10/apply-to-v7.sh" "$TARGET"
+bash "$WORK/source/fortify-guided-lifecycle-addon-v11/apply-to-v7.sh" "$TARGET"
+
 printf '12.0.0-foundation\n' > "$TARGET/VERSION"
 
-[[ -x "$TARGET/tests/run-tests.sh" ]] && (cd "$TARGET" && ./tests/run-tests.sh)
-[[ -x "$WORK/source/fortify-recovery-addon-v9/tests/recovery-static-test.sh" ]] && "$WORK/source/fortify-recovery-addon-v9/tests/recovery-static-test.sh" "$TARGET"
-[[ -x "$WORK/source/fortify-guided-lifecycle-addon-v11/tests/guided-static-test.sh" ]] && "$WORK/source/fortify-guided-lifecycle-addon-v11/tests/guided-static-test.sh" "$TARGET"
+if [[ -f "$TARGET/tests/run-tests.sh" ]]; then
+    (
+        cd "$TARGET"
+        bash ./tests/run-tests.sh
+    ) || fatal "Toolkit test suite failed"
+fi
+
+if [[ -f "$WORK/source/fortify-recovery-addon-v9/tests/recovery-static-test.sh" ]]; then
+    bash "$WORK/source/fortify-recovery-addon-v9/tests/recovery-static-test.sh" "$TARGET" \
+        || fatal "Recovery add-on validation failed"
+fi
+
+if [[ -f "$WORK/source/fortify-guided-lifecycle-addon-v11/tests/guided-static-test.sh" ]]; then
+    bash "$WORK/source/fortify-guided-lifecycle-addon-v11/tests/guided-static-test.sh" "$TARGET" \
+        || fatal "Guided lifecycle validation failed"
+fi
 
 rm -f "$OUT/$ZIP_NAME" "$OUT/$TAR_NAME" "$OUT/SHA256SUMS"
 
 ZIP_TREE="$WORK/output-zip/$ROOT_NAME"
-mkdir -p "$(dirname "$ZIP_TREE")"; cp -a "$TARGET" "$ZIP_TREE"
+mkdir -p "$(dirname "$ZIP_TREE")"
+cp -a "$TARGET" "$ZIP_TREE"
+
 ZIP_BLOCK=$'```bash\nunzip '"$ZIP_NAME"$'\ncd '"$ROOT_NAME"$'\nsudo ./install.sh\n```'
-render_template "$SCRIPT_DIR/assets/QUICK_START-template.md" "$ZIP_TREE/QUICK_START.md" ZIP "$ZIP_NAME" "unzip $ZIP_NAME" "$ZIP_BLOCK"
-printf 'ZIP\n' > "$ZIP_TREE/PACKAGE_FORMAT"; printf '%s\n' "$ZIP_NAME" > "$ZIP_TREE/SOURCE_ARCHIVE"
+
+render_template \
+    "$SCRIPT_DIR/assets/QUICK_START-template.md" \
+    "$ZIP_TREE/QUICK_START.md" \
+    ZIP \
+    "$ZIP_NAME" \
+    "unzip $ZIP_NAME" \
+    "$ZIP_BLOCK"
+
+printf 'ZIP\n' > "$ZIP_TREE/PACKAGE_FORMAT"
+printf '%s\n' "$ZIP_NAME" > "$ZIP_TREE/SOURCE_ARCHIVE"
+
 scan_wrong_format_references "$ZIP_TREE" "$TAR_NAME"
-(cd "$WORK/output-zip" && zip -qr "$OUT/$ZIP_NAME" "$ROOT_NAME")
+
+(
+    cd "$WORK/output-zip"
+    zip -qr "$OUT/$ZIP_NAME" "$ROOT_NAME"
+)
 
 TAR_TREE="$WORK/output-tar/$ROOT_NAME"
-mkdir -p "$(dirname "$TAR_TREE")"; cp -a "$TARGET" "$TAR_TREE"
-TAR_BLOCK=$'```bash\ntar -xzf '"$TAR_NAME"$'\ncd '"$ROOT_NAME"$'\nsudo ./install.sh\n```'
-render_template "$SCRIPT_DIR/assets/QUICK_START-template.md" "$TAR_TREE/QUICK_START.md" TAR.GZ "$TAR_NAME" "tar -xzf $TAR_NAME" "$TAR_BLOCK"
-printf 'TAR.GZ\n' > "$TAR_TREE/PACKAGE_FORMAT"; printf '%s\n' "$TAR_NAME" > "$TAR_TREE/SOURCE_ARCHIVE"
-scan_wrong_format_references "$TAR_TREE" "$ZIP_NAME"
-(cd "$WORK/output-tar" && tar -czf "$OUT/$TAR_NAME" "$ROOT_NAME")
+mkdir -p "$(dirname "$TAR_TREE")"
+cp -a "$TARGET" "$TAR_TREE"
 
-# End-to-end verification of finished outputs.
+TAR_BLOCK=$'```bash\ntar -xzf '"$TAR_NAME"$'\ncd '"$ROOT_NAME"$'\nsudo ./install.sh\n```'
+
+render_template \
+    "$SCRIPT_DIR/assets/QUICK_START-template.md" \
+    "$TAR_TREE/QUICK_START.md" \
+    TAR.GZ \
+    "$TAR_NAME" \
+    "tar -xzf $TAR_NAME" \
+    "$TAR_BLOCK"
+
+printf 'TAR.GZ\n' > "$TAR_TREE/PACKAGE_FORMAT"
+printf '%s\n' "$TAR_NAME" > "$TAR_TREE/SOURCE_ARCHIVE"
+
+scan_wrong_format_references "$TAR_TREE" "$ZIP_NAME"
+
+(
+    cd "$WORK/output-tar"
+    tar -czf "$OUT/$TAR_NAME" "$ROOT_NAME"
+)
+
 unzip -tq "$OUT/$ZIP_NAME" >/dev/null
 tar -tzf "$OUT/$TAR_NAME" >/dev/null
+
 unzip -p "$OUT/$ZIP_NAME" "$ROOT_NAME/QUICK_START.md" | grep -Fq "unzip $ZIP_NAME"
 ! unzip -p "$OUT/$ZIP_NAME" "$ROOT_NAME/QUICK_START.md" | grep -Fq "$TAR_NAME"
+
 tar -xOf "$OUT/$TAR_NAME" "$ROOT_NAME/QUICK_START.md" | grep -Fq "tar -xzf $TAR_NAME"
 ! tar -xOf "$OUT/$TAR_NAME" "$ROOT_NAME/QUICK_START.md" | grep -Fq "$ZIP_NAME"
+
 [[ "$(unzip -p "$OUT/$ZIP_NAME" "$ROOT_NAME/PACKAGE_FORMAT")" == ZIP ]]
 [[ "$(tar -xOf "$OUT/$TAR_NAME" "$ROOT_NAME/PACKAGE_FORMAT")" == TAR.GZ ]]
+
 sha256sum "$OUT/$ZIP_NAME" "$OUT/$TAR_NAME" > "$OUT/SHA256SUMS"
-printf 'Build passed. Outputs: %s and %s\n' "$OUT/$ZIP_NAME" "$OUT/$TAR_NAME"
+
+echo
+echo "Build Summary"
+echo "============="
+echo "Base package      : fortify-lab-toolkit-v7"
+echo "Applied           : fortify-github-addon-v8"
+echo "Applied           : fortify-recovery-addon-v9"
+echo "Applied           : fortify-validation-addon-v10"
+echo "Applied           : fortify-guided-lifecycle-addon-v11"
+echo "Generated version : 12.0.0-foundation"
+echo
+
+printf 'Build passed. Outputs: %s and %s\n' \
+    "$OUT/$ZIP_NAME" \
+    "$OUT/$TAR_NAME"

@@ -1,0 +1,42 @@
+Package: fortify-lab-toolkit-v7
+Version: 7
+Purpose: Base toolkit
+Base-Version: None
+Generated: 2026-10-08T11:00:04
+
+Files
+==================================================
+
+install.sh
+README.md
+TEST_PLAN.md
+bin\fortify-lab
+config\deployment.env.example
+lib\certificates.sh
+lib\common.sh
+lib\config.sh
+lib\database.sh
+lib\health.sh
+lib\hosts.sh
+lib\license.sh
+lib\licensing.sh
+lib\lifecycle.sh
+lib\prerequisites.sh
+lib\repair.sh
+lib\secrets.sh
+lib\ssc.sh
+lib\stages.sh
+lib\update.sh
+lib\versions.sh
+logs\staged-deployment.log
+state\deployment-state.lock
+state\deployment-state.tsv
+tests\01-static-validation.sh
+tests\02-command-smoke.sh
+tests\03-hosts-sandbox.sh
+tests\04-state-resume.sh
+tests\10-ubuntu-integration.sh
+tests\20-platform-validation.sh
+tests\run-tests.sh
+tests\testlib.sh
+

@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
+ROOT="${FORTIFY_HOME:-/opt/fortify-deploy}"
+[[ -d "$ROOT/lib" ]] || ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export FORTIFY_HOME="$ROOT"
+# shellcheck source=../lib/common.sh
+source "$ROOT/lib/common.sh"
+source "$ROOT/lib/fcli.sh"
+source "$ROOT/lib/config.sh"
+source "$ROOT/lib/secrets.sh"
+source "$ROOT/lib/versions.sh"
+source "$ROOT/lib/prerequisites.sh"
+source "$ROOT/lib/repository.sh"
+source "$ROOT/lib/hosts.sh"
+source "$ROOT/lib/database.sh"
+source "$ROOT/lib/certificates.sh"
+source "$ROOT/lib/ssc.sh"
+source "$ROOT/lib/license.sh"
+source "$ROOT/lib/licensing.sh"
+source "$ROOT/lib/lifecycle.sh"
+source "$ROOT/lib/health.sh"
+source "$ROOT/lib/probes.sh"
+source "$ROOT/lib/recovery-hardened.sh"
+source "$ROOT/lib/repair.sh"
+source "$ROOT/lib/update.sh"
+source "$ROOT/lib/stages.sh"
+source "$ROOT/lib/guided.sh"
+
+usage() {
+  cat <<'USAGE'
+Fortify Lab Lifecycle Manager
+Usage: fortify-lab [command] [subcommand] [component]
+
+Primary attended experience: fortify-lab guided
+
+Commands:
+  guided                            Guided Lab Lifecycle menu
+  menu                              Interactive menu
+  preflight                         Validate VM readiness
+  prerequisites install             Install missing prerequisites
+  configure                         Create/edit local deployment configuration
+  versions discover                 Find latest common Fortify chart release set
+  versions show                     Show locked versions
+  versions lock [release-family]    Lock selected compatible versions
+  secrets init|list|edit|sync       Manage encrypted local secrets
+  certificates menu|generate|import|validate|sync
+  database init|validate|backup      Guarded SQL Server workflows
+  ssc prepare|validate               Autoconfig/license/certificate workflow
+  repo auth|clone|status|update|validate Optional repository workflow
+  hosts precheck|apply|verify|show|remove      Manage local /etc/hosts entries
+  license import|validate|sync|status Manage fortify.license locally
+  licensing prepare|verify           Guided LIM licensing workflow
+  install [all|component]           Install whole stack or one component
+  health [all|component]            Health report
+  repair [all|component]            Reapply locked version/config and repair pods
+  update check                      Discover newer compatible versions
+  update plan [component]           Build an upgrade plan
+  update apply [all|component]      Perform backup, upgrade, validate
+  rollback [component] [revision]   Roll back a Helm release
+  recover                           Strict dependency-ordered reboot recovery
+  boot-health                       Conservative read-only boot health check
+  backup                            Create local encrypted/config checkpoint
+  status                            Short health summary
+  workflow run|resume|status         Strict durable staged deployment
+  workflow reset [all|stage]         Reset durable gate state
+  workflow verify <stage>            Re-run and mark a gate after verification
+
+Components: infrastructure database lim ssc sast dast-core dast-scanner
+USAGE
+}
+
+menu() {
+  while true; do
+    clear || true
+    cat <<'MENU'
+Fortify Lab Lifecycle Manager
+=============================
+1) Preflight check
+2) Install prerequisites
+3) Configure deployment
+4) Discover/lock compatible versions
+5) Manage secrets
+6) Configure/verify /etc/hosts
+7) Import/validate fortify.license
+8) Certificates and PKI
+9) SQL Server setup/repair
+10) SSC guarded preparation
+11) Guided LIM licensing
+12) Strict staged install/resume
+13) Install/repair one component
+14) Health check
+15) Repair entire installation
+16) Check/plan upgrades
+17) Upgrade entire installation
+18) Upgrade one component
+19) Recover after VM reboot
+20) Backup configuration and databases
+21) Roll back a component
+0) Exit
+MENU
+    read -rp "Select: " choice
+    case "$choice" in
+      1) preflight; pause;;
+      2) prerequisites_install; pause;;
+      3) configure_interactive; pause;;
+      4) versions_discover; versions_lock_interactive; pause;;
+      5) secrets_menu;;
+      6) hosts_menu;;
+      7) license_menu;;
+      8) certificates_menu;;
+      9) database_initialize; pause;;
+      10) ssc_sync_secrets; pause;;
+      11) licensing_menu;;
+      12) workflow_resume; pause;;
+      13) c=$(choose_component); repair_component "$c"; pause;;
+      14) health_all; pause;;
+      15) repair_component all; pause;;
+      16) update_check; update_plan all; pause;;
+      17) update_apply all; pause;;
+      18) c=$(choose_component); update_apply "$c"; pause;;
+      19) recover_all; pause;;
+      20) backup_create; pause;;
+      21) c=$(choose_component); rollback_component "$c"; pause;;
+      0) exit 0;;
+      *) warn "Invalid selection"; sleep 1;;
+    esac
+  done
+}
+
+cmd="${1:-menu}"; shift || true
+case "$cmd" in
+  guided) guided_menu;;
+  menu) menu;;
+  preflight) preflight;;
+  prerequisites) [[ "${1:-}" == install ]] && prerequisites_install || usage;;
+  configure) configure_interactive;;
+  versions)
+    sub="${1:-show}"; shift || true
+    case "$sub" in discover) versions_discover;; show) versions_show;; lock) versions_lock "${1:-}";; *) usage;; esac;;
+  secrets)
+    sub="${1:-list}"; shift || true
+    case "$sub" in init) secrets_init;; list) secrets_list;; edit) secrets_edit;; sync) secrets_sync;; *) usage;; esac;;
+  certificates)
+    sub="${1:-menu}"; shift || true
+    case "$sub" in menu) certificates_menu;; generate) certificates_generate_self_signed;; import) certificates_import;; validate) certificates_validate;; sync) certificates_sync;; *) usage;; esac;;
+  database)
+    sub="${1:-validate}"; shift || true
+    case "$sub" in init) database_initialize;; validate) database_validate;; backup) database_backup;; *) usage;; esac;;
+  ssc)
+    sub="${1:-prepare}"; shift || true
+    case "$sub" in prepare) ssc_sync_secrets;; validate) ssc_validate;; *) usage;; esac;;
+  repo)
+    sub="${1:-status}"; shift || true
+    case "$sub" in auth) repo_auth;; clone) repo_clone "${1:-}" "${2:-}";; status) repo_status;; update) repo_update;; validate) repo_validate "${1:-}";; menu) repo_menu;; *) usage;; esac;;
+  hosts)
+    sub="${1:-show}"; shift || true
+    case "$sub" in precheck) hosts_precheck;; apply) hosts_apply;; verify) hosts_verify;; show) hosts_show;; remove) hosts_remove;; menu) hosts_menu;; *) usage;; esac;;
+  license)
+    sub="${1:-status}"; shift || true
+    case "$sub" in import) license_import "${1:-}";; validate) license_validate "${1:-}";; sync) license_sync;; status) license_status;; menu) license_menu;; *) usage;; esac;;
+  licensing)
+    sub="${1:-prepare}"; shift || true
+    case "$sub" in prepare) licensing_prepare;; verify) licensing_verify;; *) usage;; esac;;
+  workflow)
+    sub="${1:-status}"; shift || true
+    case "$sub" in run) workflow_run "${1:-}";; resume) workflow_resume;; status) workflow_status;; reset) workflow_reset "${1:-all}";; verify) workflow_verify_stage "${1:?stage required}";; *) usage;; esac;;
+  install) if [[ "${1:-all}" == all ]]; then workflow_resume; else install_component "$1"; fi;;
+  health|status) [[ "${1:-all}" == all ]] && health_all || health_component "$1";;
+  repair) repair_component "${1:-all}";;
+  update)
+    sub="${1:-check}"; shift || true
+    case "$sub" in check) update_check;; plan) update_plan "${1:-all}";; apply) update_apply "${1:-all}";; *) usage;; esac;;
+  rollback) rollback_component "${1:-}" "${2:-}";;
+  recover) recover_all;;
+  boot-health) boot_health_check;;
+  backup) backup_create;;
+  -h|--help|help) usage;;
+  *) die "Unknown command: $cmd";;
+esac

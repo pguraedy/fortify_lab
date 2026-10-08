@@ -1,0 +1,38 @@
+Fortify Lab Lifecycle Manager
+Usage: fortify-lab [command] [subcommand] [component]
+
+Primary attended experience: fortify-lab guided
+
+Commands:
+  guided                            Guided Lab Lifecycle menu
+  menu                              Interactive menu
+  preflight                         Validate VM readiness
+  prerequisites install             Install missing prerequisites
+  configure                         Create/edit local deployment configuration
+  versions discover                 Find latest common Fortify chart release set
+  versions show                     Show locked versions
+  versions lock [release-family]    Lock selected compatible versions
+  secrets init|list|edit|sync       Manage encrypted local secrets
+  certificates menu|generate|import|validate|sync
+  database init|validate|backup      Guarded SQL Server workflows
+  ssc prepare|validate               Autoconfig/license/certificate workflow
+  repo auth|clone|status|update|validate Optional repository workflow
+  hosts precheck|apply|verify|show|remove      Manage local /etc/hosts entries
+  license import|validate|sync|status Manage fortify.license locally
+  licensing prepare|verify           Guided LIM licensing workflow
+  install [all|component]           Install whole stack or one component
+  health [all|component]            Health report
+  repair [all|component]            Reapply locked version/config and repair pods
+  update check                      Discover newer compatible versions
+  update plan [component]           Build an upgrade plan
+  update apply [all|component]      Perform backup, upgrade, validate
+  rollback [component] [revision]   Roll back a Helm release
+  recover                           Strict dependency-ordered reboot recovery
+  boot-health                       Conservative read-only boot health check
+  backup                            Create local encrypted/config checkpoint
+  status                            Short health summary
+  workflow run|resume|status         Strict durable staged deployment
+  workflow reset [all|stage]         Reset durable gate state
+  workflow verify <stage>            Re-run and mark a gate after verification
+
+Components: infrastructure database lim ssc sast dast-core dast-scanner

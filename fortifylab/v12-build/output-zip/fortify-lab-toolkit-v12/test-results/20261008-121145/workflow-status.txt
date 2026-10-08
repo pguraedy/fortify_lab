@@ -1,0 +1,19 @@
+STAGE                STATUS           UPDATED                   DETAIL
+-------------------- ---------------- ------------------------- ------
+preflight            NOT_STARTED      -                         
+prerequisites        NOT_STARTED      -                         
+configuration        NOT_STARTED      -                         
+hostname-resolution  NOT_STARTED      -                         
+secrets              NOT_STARTED      -                         
+versions             NOT_STARTED      -                         
+infrastructure       NOT_STARTED      -                         
+license-file         NOT_STARTED      -                         
+certificates         NOT_STARTED      -                         
+database             NOT_STARTED      -                         
+lim                  NOT_STARTED      -                         
+licensing            NOT_STARTED      -                         
+ssc                  NOT_STARTED      -                         
+sast                 NOT_STARTED      -                         
+dast-core            NOT_STARTED      -                         
+dast-scanner         NOT_STARTED      -                         
+final-validation     NOT_STARTED      -                         

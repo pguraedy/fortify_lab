@@ -1,0 +1,15 @@
+[Unit]
+Description=Fortify Lab conservative post-boot health check
+After=network-online.target docker.service k3s.service
+Wants=network-online.target
+ConditionPathExists=/opt/fortify-deploy/config/deployment.env
+
+[Service]
+Type=oneshot
+ExecStart=/opt/fortify-deploy/bin/fortify-lab boot-health
+TimeoutStartSec=900
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

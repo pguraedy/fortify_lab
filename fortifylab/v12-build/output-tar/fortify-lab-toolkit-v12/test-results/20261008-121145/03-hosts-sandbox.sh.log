@@ -1,0 +1,9 @@
+===== 03-hosts-sandbox.sh =====
+PASS: namespace SSC hostname generated
+PASS: namespace LIM hostname generated
+PASS: namespace SAST hostname generated
+PASS: namespace DAST hostname generated
+PASS: correct existing entry accepted
+PASS: conflicting entry rejected
+PASS: duplicate entry rejected
+RESULT: PASS=7 FAIL=0 SKIP=0

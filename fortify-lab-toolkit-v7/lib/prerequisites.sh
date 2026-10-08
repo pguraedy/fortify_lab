@@ -13,6 +13,19 @@ preflight(){
   [[ "$(hostname)" =~ ^[a-z0-9.-]+$ ]] && ok "Hostname $(hostname)" || warn 'Hostname should be lowercase DNS-safe'
   for c in curl jq openssl docker k3s kubectl helm age age-keygen java keytool; do command_exists "$c" && ok "$c installed" || warn "$c missing"; done
 }
+apt_repair_if_needed() {
+    if ! sudo apt-get update >/dev/null 2>&1; then
+        echo "Attempting apt repair..."
+
+        sudo rm -f /var/lib/apt/lists/lock
+        sudo rm -f /var/cache/apt/archives/lock
+        sudo rm -f /var/lib/dpkg/lock
+        sudo rm -f /var/lib/dpkg/lock-frontend
+
+        sudo dpkg --configure -a
+    fi
+}
+
 prerequisites_install(){
   need_root
   export DEBIAN_FRONTEND=noninteractive

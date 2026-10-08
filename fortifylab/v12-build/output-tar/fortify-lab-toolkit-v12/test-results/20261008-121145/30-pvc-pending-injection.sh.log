@@ -1,0 +1,2 @@
+===== 30-pvc-pending-injection.sh =====
+SKIP: set RUN_STORAGE_FAILURE_TESTS=1
