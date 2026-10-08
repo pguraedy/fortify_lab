@@ -8,6 +8,34 @@ PACKAGE_DIR="$SCRIPT_DIR"
 WORK=${WORK:-$SCRIPT_DIR/v12-build}
 OUT=${OUT:-$SCRIPT_DIR/dist}
 
+if [[ "${1:-}" == "--verify" ]]; then
+    echo "Verifying package archives..."
+
+    for f in \
+        fortify-lab-toolkit-v7.tar.gz \
+        fortify-github-addon-v8.tar.gz \
+        fortify-recovery-addon-v9.tar.gz \
+        fortify-validation-addon-v10.tar.gz \
+        fortify-guided-lifecycle-addon-v11.tar.gz
+    do
+        [[ -f "$f" ]] || {
+            echo "Missing: $f"
+            exit 1
+        }
+
+        tar -tzf "$f" >/dev/null || {
+            echo "Invalid archive: $f"
+            exit 1
+        }
+
+        echo "OK: $f"
+    done
+
+    echo
+    echo "All package archives validated."
+    exit 0
+fi
+
 [[ -d "$SCRIPT_DIR/assets" ]] || { echo "ERROR: Missing assets directory under $SCRIPT_DIR" >&2; exit 1; }
 [[ -d "$SCRIPT_DIR/tests" ]] || { echo "ERROR: Missing tests directory under $SCRIPT_DIR" >&2; exit 1; }
 

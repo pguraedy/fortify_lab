@@ -1,0 +1,14 @@
+Package: fortify-guided-lifecycle-addon-v11
+Version: 11
+Purpose: Guided lifecycle framework
+Base-Version: v10
+Generated: 2026-10-08T11:00:04
+
+Files
+==================================================
+
+apply-to-v7.sh
+README.md
+lib\guided.sh
+tests\guided-static-test.sh
+

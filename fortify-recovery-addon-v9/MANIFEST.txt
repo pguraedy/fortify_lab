@@ -1,0 +1,16 @@
+Package: fortify-recovery-addon-v9
+Version: 9
+Purpose: Recovery framework
+Base-Version: v8
+Generated: 2026-10-08T11:00:04
+
+Files
+==================================================
+
+apply-to-v7.sh
+README.md
+lib\probes.sh
+lib\recovery.sh
+systemd\fortify-lab-boot-health.service
+tests\recovery-static-test.sh
+

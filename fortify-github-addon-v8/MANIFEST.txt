@@ -1,0 +1,14 @@
+Package: fortify-github-addon-v8
+Version: 8
+Purpose: GitHub integration
+Base-Version: v7
+Generated: 2026-10-08T11:00:04
+
+Files
+==================================================
+
+apply-to-v7.sh
+README.md
+setup-github-desktop-ubuntu.sh
+lib\repository.sh
+
